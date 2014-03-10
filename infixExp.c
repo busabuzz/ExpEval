@@ -3,7 +3,7 @@
  *              
  * <term>      ::= <factor> { '*' <factor> | '/' <factor> }
  *
- * <factor> ::= <natnum> { <identifier> | '('<expression>')' }
+ * <factor> ::= <natnum> | <identifier> | '('<expression>')' 
  *
  * Starting point is the token list obtained from the scanner (in scanner.c). 
  */
@@ -13,8 +13,8 @@
 #include <assert.h> /* assert */
 #include "scanner.h"
 #include "recognizeExp.h"
-#include "evalExp.h"
-#include "prefixExp.h"
+#include "evalExp1.h"
+#include "infixExp.h"
 
 /* The function newExpTreeNode creates a new node for an expression tree.
  */
@@ -48,10 +48,32 @@ int valueIdentifier(List *lp, char **sp) {
  */
 
 int isOperator(char c) {
-  return ( c == '+' || c == '-' || c == '*' || c == '/');
+	if ( c == '+' || c == '-' ) return 1;
+	if ( c == '*' || c == '/' ) return 2;
+	return 0;
 }
 
 int valueOperator(List *lp, char *cp) {
+	if ( *lp != NULL && (*lp)->tt == Symbol ) {
+		switch ( isOperator(((*lp)->t).symbol) ) {
+			case 1:
+				*cp = ((*lp)->t).symbol;
+				return 1;
+			case 2:
+				*cp = ((*lp)->t).symbol;
+				return 2;
+			case 0:
+				return 0;
+		}
+	}
+	return 0;
+}
+
+int isOperator1(char c) {
+  return ( c == '+' || c == '-' || c == '*' || c == '/');
+}
+
+int valueOperator1(List *lp, char *cp) {
   if (*lp != NULL && (*lp)->tt == Symbol && isOperator(((*lp)->t).symbol) ) {
     *cp = ((*lp)->t).symbol;
     *lp = (*lp)->next;
@@ -83,39 +105,94 @@ void freeExpTree(ExpTree tr) {
  */
  
 int valueExpression(List *tempList, ExpTree *tp) {
-	if ( !valueTerm ( templist, tp ) ) {
-		return 0;
-	} 
-	
-	while(templist != NULL) {
-		if( valueOperator(templist, &c) ) {
-			if ( valueTerm(lp, &w) ) {
-					
+	Token t;
+	ExpTree tL, tR;
+	char c;
+	if ( valueTerm ( tempList, &tL ) ) {
+		if( valueOperator(tempList, &c) == 1 ) {
+			(*tempList) = (*tempList)->next;
+			if ( valueExpression(tempList, &tR) ) {
+				t.symbol = c;
+				*tp = newExpTreeNode(Symbol, t, tL, tR);
+				return 1;	
 			} else {
+				freeExpTree(tL);
 				return 0;
 			} 
 		} else {
+			(*tp) = tL;
+			return 1;
+		}
+	} else {
+		return 0;
+	}	
+}
+
+int valueExpression1(List *tempList, ExpTree *tp) {
+	Token t;
+	ExpTree tL, tR;
+	char c;
+	if ( valueOperator(tempList, &c) == 1 ) {
+		(*tempList) = (*tempList)->next;
+		t.symbol = c;
+		if(valueTerm1(tempList, &tL)) {		
+			tR = *tp;	
+			*tp = newExpTreeNode(Symbol, t, tL, tR);
+			return 1;
+		} else {		
 			return 0;
 		}
-	}
+	} 
+	if ( valueTerm1(tempList, tp) ) {
+		printf("22\n");
+		if ( valueExpression1(tempList, tp ) ) return 1;
+	} 
+	return 1;	
+}
+
+int valueTerm1(List *tempList, ExpTree *tp) {
+	Token t;
+	ExpTree  tL, tR;
+	char c;
+	if ( valueOperator(tempList, &c) == 2 ) {
+		(*tempList) = (*tempList)->next;
+		t.symbol = c;
+		if(valueFactor(tempList, &tL)) {
+			tR = *tp;			
+			*tp = newExpTreeNode(Symbol, t, tL, tR);
+			return 1;
+		} else {		
+			return 0;
+		}
+	} 
+	if ( valueFactor(tempList, tp) ) {
+		printf("11\n");
+		if ( valueTerm1(tempList, tp ) ) return 1;
+	} 
 	return 1;
 }
 
 int valueTerm(List *tempList, ExpTree *tp) {
+	Token t;
+	ExpTree tL, tR;
 	char c;
-	if ( !valueFactor(templist, tp) ) {
-		return 0;
-	}
-	
-	while(templist != NULL) {
-		if ( valueOperator( tempList, &c ) ) {
-			if ( !valueFactor( templist, tp ) ) {
+	if ( valueFactor(tempList, &tL) ) {
+		if ( valueOperator(tempList, &c) == 2 ) {
+			(*tempList) = (*tempList)->next;
+			if ( valueTerm( tempList, &tR ) ) {
+				t.symbol = c;
+				*tp = newExpTreeNode(Symbol, t, tL, tR);
+				return 1;
+			} else { 
+				freeExpTree(tL);
 				return 0;
-			} 
-			
+			}
 		} else {
-			return 0;
+			*tp = tL;
+			return 1;
 		}
+	} else {
+		return 0;
 	}
 	return 1;
 }
@@ -123,87 +200,25 @@ int valueTerm(List *tempList, ExpTree *tp) {
 int valueFactor(List *tempList, ExpTree *tp) {
 	double w;
 	char *s;
-	char c;
 	Token t;
-	if ( valueNumber(templist, &w) ) {
+	
+	if ( valueNumber(tempList, &w) ) {
 		t.number = (int)w;
 		*tp = newExpTreeNode(Number, t, NULL, NULL);
 		return 1;
 	}
 	
-	if ( valueIdentifier(templist, &s) ) {
+	if ( valueIdentifier(tempList, &s) ) {
 		t.identifier = s;
 		*tp = newExpTreeNode(Identifier, t, NULL, NULL);
 		return 1;
 	}
 	
-	if ( valueExpression(templist, tp) ) {
+	if ( acceptCharacter(tempList,'(') && valueExpression(tempList, tp) && acceptCharacter(tempList,')') ) {	
 		return 1;
 	}
 	return 0;
 }
-
-int treeInfixExpression(List *lp, ExpTree *tp) { 
-	double w;
-	char *s;
-	char c;
-	List *tempList;
-	templist = lp;
-	Token t;
-	ExpTree tL, tR;
-	t.number = (int)w;
-	if ( !valueTerm(templist,&w) ) {
-		return 0;
-	} 
-	
-	while(templist != NULL) {
-		if ( valueOperator(templist,&c) ) {
-			if ( valueTerm(lp,&w) ) {
-					
-			} else {
-				return 0;
-			} 
-		} else {
-			return 0;
-		}
-	}
-	return 1;
-}
-	
-		tr = treeInfixExpression(lp,&tl);
-		*tp = newExpTreeNode(Symbol, t, tL, tR);
-	} else {
-		tl = treeInfixExpression(lp,&tl);
-		*tp = newExpTreeNode(Number, t, NULL, NULL);
-	}
-	
-	
-	
-	
-	p,&s) ) {
-		t.identifier = s;
-		*tp = newExpTreeNode(Identifier, t, NULL, NULL);
-		return 1;
-	}
-	if ( treeInfixExpression(lp,&tL) ) {
-		if ( valueOperator(lp,&c) ) {
-			if ( treeInfixExpression(lp,&tR) ) {
-				t.symbol = c;
-				*tp = newExpTreeNode(Symbol, t, tL, tR);
-				return 1;
-			} else {
-				freeExpTree(tL);
-				return 0;
-			}
-		} else {
-			return 1;
-		}
-	}
-	return 0;
-}
-
-/* The function printExpTreeInfix does what its name suggests.
- */
 
 void printExpTreeInfix(ExpTree tr) {
   if (tr == NULL) {
@@ -277,14 +292,14 @@ void prefExpTrees() {
   char *ar;
   List tl, tl1;  
   ExpTree t = NULL; 
-  printf("give a prefix expression: ");
+  printf("give an expression: ");
   ar = readInput();
   while (ar[0] != '!') {
     tl = tokenList(ar); 
     printf("the token list is ");
     printList(tl);
     tl1 = tl;
-    if ( treeInfixExpression(&tl1,&t) && tl1 == NULL ) { 
+    if ( valueExpression1(&tl1,&t) && tl1 == NULL ) { 
          /* there should be no tokens left */
       printf("in infix notation: ");
       printExpTreeInfix(t);
@@ -292,16 +307,16 @@ void prefExpTrees() {
       if ( isNumerical(t) ) {
         printf("the value is %g\n",valueExpTree(t));
       } else {
-        printf("this is not a numerical prefix expression\n");
+        printf("this is not a numerical expression\n");
       }
     } else {
-      printf("this is not a prefix expression\n"); 
+      printf("this is not an expression\n"); 
     }
     freeExpTree(t);
     t = NULL; 
     freeTokenList(tl);  
     free(ar);
-    printf("\ngive a prefix expression: ");
+    printf("\ngive an expression: ");
     ar = readInput();
   }
   free(ar);

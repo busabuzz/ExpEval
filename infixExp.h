@@ -15,7 +15,13 @@ typedef struct ExpTreeNode {
   ExpTree right;
 } ExpTreeNode;
 
-int treeInfixExpression(List *lp, ExpTree *tp);
+int valueExpression1(List *tempList, ExpTree *tp);
+int valueTerm1(List *tempList, ExpTree *tp);
+int valueOperator1(List *lp, char *cp);
+int isOperator1(char c); 
+int valueExpression(List *tempList, ExpTree *tp);
+int valueTerm(List *tempList, ExpTree *tp);
+int valueFactor(List *tempList, ExpTree *tp);
 ExpTree newExpTreeNode(TokenType tt, Token t, ExpTree tL, ExpTree tR);
 int valueIdentifier(List *lp, char **sp);
 int isNumerical(ExpTree tr);
