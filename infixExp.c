@@ -225,12 +225,12 @@ double valueExpTree(ExpTree tr) {  /* precondition: isNumerical(tr)) */
 }
 
 void simplify(ExpTree *tree) {	
-	if(simplify1(tree)) {
+	if(simplifyLevel(tree)) {
 		simplify(tree);
 	}
 }
 
-int simplify1(ExpTree *tree) {
+int simplifyLevel(ExpTree *tree) {
 	ExpTree tempTree;
 	Token tempToken;
 	/* multiply  */
@@ -242,7 +242,7 @@ int simplify1(ExpTree *tree) {
 			freeExpTree((*tree));
 			tempToken.number = 0;
 			*tree = newExpTreeNode(Number, tempToken , NULL, NULL);
-			if(simplify1(tree)) simplify(tree);
+			if(simplifyLevel(tree)) simplify(tree);
 			return 1;
 		}
 		/* 1 * E = E*/
@@ -252,7 +252,7 @@ int simplify1(ExpTree *tree) {
 			(*tree)->right->right = NULL;
 			freeExpTree((*tree));
 			*tree = tempTree;
-			if(simplify1(tree)) simplify(tree);
+			if(simplifyLevel(tree)) simplify(tree);
 			return 1;
 		}
 		/* E * 1 = E */
@@ -262,7 +262,7 @@ int simplify1(ExpTree *tree) {
 			(*tree)->left->right = NULL;
 			freeExpTree((*tree));
 			*tree = tempTree;
-			if(simplify1(tree)) simplify(tree);
+			if(simplifyLevel(tree)) simplify(tree);
 			return 1;
 		}
 	}
@@ -273,7 +273,7 @@ int simplify1(ExpTree *tree) {
 			freeExpTree((*tree));
 			tempToken.number = 0;
 			*tree = newExpTreeNode(Number, tempToken, NULL, NULL);
-			if(simplify1(tree)) simplify(tree);
+			if(simplifyLevel(tree)) simplify(tree);
 			return 1;
 		}
 		/* E / 1  = E */
@@ -283,7 +283,7 @@ int simplify1(ExpTree *tree) {
 			(*tree)->left->right = NULL;
 			freeExpTree((*tree));
 			*tree = tempTree;
-			if(simplify1(tree)) simplify(tree);
+			if(simplifyLevel(tree)) simplify(tree);
 			return 1;
 		}
 	}
@@ -296,7 +296,7 @@ int simplify1(ExpTree *tree) {
 			(*tree)->right->right = NULL;
 			freeExpTree(*tree);
 			*tree = tempTree;
-			if(simplify1(tree)) simplify(tree);
+			if(simplifyLevel(tree)) simplify(tree);
 			return 1;
 		}
 		/* E + 0 = E */
@@ -306,7 +306,7 @@ int simplify1(ExpTree *tree) {
 			(*tree)->left->right = NULL;
 			freeExpTree(*tree);
 			*tree = tempTree;
-			if(simplify1(tree)) simplify(tree);
+			if(simplifyLevel(tree)) simplify(tree);
 			return 1;
 		}
 	}
@@ -317,11 +317,11 @@ int simplify1(ExpTree *tree) {
 		(*tree)->left->right = NULL;
 		freeExpTree(*tree);
 		*tree = tempTree;
-		if(simplify1(tree)) simplify(tree);
+		if(simplifyLevel(tree)) simplify(tree);
 		return 1;
 	}
-	if ( simplify1(&((*tree)->left)) ) return 1;
-	if ( simplify1(&((*tree)->right)) ) return 1;
+	if ( simplifyLevel(&((*tree)->left)) ) return 1;
+	if ( simplifyLevel(&((*tree)->right)) ) return 1;
 	return 0;
 }
 
