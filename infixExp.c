@@ -331,23 +331,24 @@ int simplifyLevel(ExpTree *tree) {
  * expression, its value is computed and printed.
  */ 
  
-void makeTreeCopy(ExpTree *tp, ExpTree *tp1) {	
+ExpTree makeTreeCopy(ExpTree *tp) {	
+	ExpTree tempTree = NULL;
 	if ( *tp != NULL ) {
-		(*tp1) = newExpTreeNode((*tp)->tt, (*tp)->t, (*tp)->left, (*tp)->right);
-		makeTreeCopy(&(*tp)->left, &(*tp1)->left); 
-		makeTreeCopy(&(*tp)->right, &(*tp1)->right); 
+		tempTree = newExpTreeNode((*tp)->tt, (*tp)->t, makeTreeCopy(&(*tp)->left), makeTreeCopy(&(*tp)->right));
 	}
+	return tempTree;
 }
 
 int differentiate(ExpTree *tp, char *identifier) {
-	ExpTree copyLeft, copyRight, diffCopyLeft, diffCopyRight;
+	ExpTree copyLeft = NULL, copyRight = NULL, diffCopyLeft = NULL, diffCopyRight = NULL;
 	Token t;
 	if ( (*tp)->tt == Number ) {
-		(*tp)->t.number = 0;
+		((*tp)->t).number = 0;
 	}
 	if ( ((*tp)->tt == Identifier) && (strcmp((*tp)->t.identifier, identifier)==0) ) {
-		(*tp)->tt = Number;
-		(*tp)->t.number = 1;
+		freeExpTree(*tp);
+		t.number = 1;
+		(*tp) = newExpTreeNode(Number, t, NULL, NULL);
 	}
 	if ( (*tp)->tt == Symbol ) {
 		switch ((*tp)->t.symbol) {
@@ -362,42 +363,47 @@ int differentiate(ExpTree *tp, char *identifier) {
 				break;
 			
 			case '*':
-				makeTreeCopy(&(*tp)->left, &copyLeft);
-				makeTreeCopy(&(*tp)->right, &copyRight);
-				differentiate(&(*tp)->left, identifier);
-				differentiate(&(*tp)->right, identifier);
-				makeTreeCopy(&(*tp)->left, &diffCopyLeft);
-				makeTreeCopy(&(*tp)->right, &diffCopyRight);
+				copyLeft = makeTreeCopy(&(*tp)->left);
+				copyRight = makeTreeCopy(&(*tp)->right);
+				diffCopyLeft = makeTreeCopy(&copyLeft);
+				diffCopyRight = makeTreeCopy(&copyRight);
+				differentiate(&diffCopyLeft, identifier);
+				differentiate(&diffCopyRight, identifier);
 				freeExpTree(*tp);
 				t.symbol = '+';
 				(*tp) = newExpTreeNode(Symbol, t, NULL, NULL);
 				t.symbol = '*';
-				(*tp)->left = newExpTreeNode(Symbol, t, diffCopyLeft, copyRight);
-				(*tp)->right = newExpTreeNode(Symbol, t, copyLeft, diffCopyRight);
+				(*tp)->left = newExpTreeNode(Symbol, t, makeTreeCopy(&diffCopyLeft), makeTreeCopy(&copyRight));
+				(*tp)->right = newExpTreeNode(Symbol, t, makeTreeCopy(&copyLeft), makeTreeCopy(&copyRight));
+				freeExpTree(copyLeft);
+				freeExpTree(copyRight);
+				freeExpTree(diffCopyLeft);
+				freeExpTree(diffCopyRight);
 				break;
 			
 			case '/':
-				makeTreeCopy(&(*tp)->left, &copyLeft);
-				makeTreeCopy(&(*tp)->right, &copyRight);
-				differentiate(&(*tp)->left, identifier);
-				differentiate(&(*tp)->right, identifier);
-				makeTreeCopy(&(*tp)->left, &diffCopyLeft);
-				makeTreeCopy(&(*tp)->right, &diffCopyRight);
-				freeExpTree(*tp);
+				copyLeft = makeTreeCopy(&(*tp)->left);
+				copyRight = makeTreeCopy(&(*tp)->right);
+				diffCopyLeft = makeTreeCopy(&copyLeft);
+				diffCopyRight = makeTreeCopy(&copyRight);
+				differentiate(&diffCopyLeft, identifier);
+				differentiate(&diffCopyRight, identifier);
 				t.symbol = '/';
+				freeExpTree(*tp);
 				(*tp) = newExpTreeNode(Symbol, t, NULL, NULL);
 				t.symbol = '-';
-				(*tp)->left = newExpTreeNode(Symbol, t, NULL, NULL);
+				(*tp)->left = newExpTreeNode(Symbol, t, NULL, NULL);		
 				t.symbol = '*';
-				((*tp)->left)->left = newExpTreeNode(Symbol, t, diffCopyLeft, copyRight);
-				((*tp)->left)->right = newExpTreeNode(Symbol, t, copyLeft, diffCopyRight);
-				(*tp)->right = newExpTreeNode(Symbol, t, diffCopyRight, diffCopyRight);
+				((*tp)->left)->left = newExpTreeNode(Symbol, t, makeTreeCopy(&diffCopyLeft), makeTreeCopy(&copyRight));
+				((*tp)->left)->right = newExpTreeNode(Symbol, t, makeTreeCopy(&copyLeft), makeTreeCopy(&diffCopyRight));
+				(*tp)->right = newExpTreeNode(Symbol, t, makeTreeCopy(&copyRight), makeTreeCopy(&copyRight));
+				freeExpTree(copyLeft);
+				freeExpTree(copyRight);
+				freeExpTree(diffCopyLeft);
+				freeExpTree(diffCopyRight);
 				break;
 		}
 	}
-	printExpTreeInfix(*tp);
-	printf("\n");
-	simplify(tp);
 	return 0;
 }
 
@@ -425,9 +431,11 @@ void infixExpTrees() {
 			printf("simplified: ");
 			printExpTreeInfix(t);
 			printf("\nderivative to x: ");
-			differentiate(&t,"x");
+			differentiate(&t,"x\0");
+			simplify(&t);
 			printExpTreeInfix(t);
 			printf("\n");
+			
 			
 		} else {
 			printf("this is not an expression\n"); 

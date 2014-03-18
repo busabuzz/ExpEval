@@ -15,9 +15,11 @@ typedef struct ExpTreeNode {
   ExpTree right;
 } ExpTreeNode;
 
+int differentiate(ExpTree *tp, char *identifier);
+ExpTree makeTreeCopy(ExpTree *tp);
 void simplify(ExpTree *tree);
 int valueNumber(List *lp, double *wp);
-int simplify1(ExpTree *tree);
+int simplifyLevel(ExpTree *tree);
 int valueExpression(List *tempList, ExpTree *tp);
 int valueTerm(List *tempList, ExpTree *tp);
 int valueFactor(List *tempList, ExpTree *tp);

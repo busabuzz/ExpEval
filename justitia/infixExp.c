@@ -14,6 +14,7 @@
 #include "scanner.h"
 #include "recognizeExp.h"
 #include "infixExp.h"
+#include <string.h>
 
 /* The function newExpTreeNode creates a new node for an expression tree.
  */
@@ -225,12 +226,12 @@ double valueExpTree(ExpTree tr) {  /* precondition: isNumerical(tr)) */
 }
 
 void simplify(ExpTree *tree) {	
-	if(simplify1(tree)) {
+	if(simplifyLevel(tree)) {
 		simplify(tree);
 	}
 }
 
-int simplify1(ExpTree *tree) {
+int simplifyLevel(ExpTree *tree) {
 	ExpTree tempTree;
 	Token tempToken;
 	/* multiply  */
@@ -242,7 +243,7 @@ int simplify1(ExpTree *tree) {
 			freeExpTree((*tree));
 			tempToken.number = 0;
 			*tree = newExpTreeNode(Number, tempToken , NULL, NULL);
-			if(simplify1(tree)) simplify(tree);
+			if(simplifyLevel(tree)) simplify(tree);
 			return 1;
 		}
 		/* 1 * E = E*/
@@ -252,7 +253,7 @@ int simplify1(ExpTree *tree) {
 			(*tree)->right->right = NULL;
 			freeExpTree((*tree));
 			*tree = tempTree;
-			if(simplify1(tree)) simplify(tree);
+			if(simplifyLevel(tree)) simplify(tree);
 			return 1;
 		}
 		/* E * 1 = E */
@@ -262,7 +263,7 @@ int simplify1(ExpTree *tree) {
 			(*tree)->left->right = NULL;
 			freeExpTree((*tree));
 			*tree = tempTree;
-			if(simplify1(tree)) simplify(tree);
+			if(simplifyLevel(tree)) simplify(tree);
 			return 1;
 		}
 	}
@@ -273,7 +274,7 @@ int simplify1(ExpTree *tree) {
 			freeExpTree((*tree));
 			tempToken.number = 0;
 			*tree = newExpTreeNode(Number, tempToken, NULL, NULL);
-			if(simplify1(tree)) simplify(tree);
+			if(simplifyLevel(tree)) simplify(tree);
 			return 1;
 		}
 		/* E / 1  = E */
@@ -283,7 +284,7 @@ int simplify1(ExpTree *tree) {
 			(*tree)->left->right = NULL;
 			freeExpTree((*tree));
 			*tree = tempTree;
-			if(simplify1(tree)) simplify(tree);
+			if(simplifyLevel(tree)) simplify(tree);
 			return 1;
 		}
 	}
@@ -296,7 +297,7 @@ int simplify1(ExpTree *tree) {
 			(*tree)->right->right = NULL;
 			freeExpTree(*tree);
 			*tree = tempTree;
-			if(simplify1(tree)) simplify(tree);
+			if(simplifyLevel(tree)) simplify(tree);
 			return 1;
 		}
 		/* E + 0 = E */
@@ -306,7 +307,7 @@ int simplify1(ExpTree *tree) {
 			(*tree)->left->right = NULL;
 			freeExpTree(*tree);
 			*tree = tempTree;
-			if(simplify1(tree)) simplify(tree);
+			if(simplifyLevel(tree)) simplify(tree);
 			return 1;
 		}
 	}
@@ -317,11 +318,11 @@ int simplify1(ExpTree *tree) {
 		(*tree)->left->right = NULL;
 		freeExpTree(*tree);
 		*tree = tempTree;
-		if(simplify1(tree)) simplify(tree);
+		if(simplifyLevel(tree)) simplify(tree);
 		return 1;
 	}
-	if ( simplify1(&((*tree)->left)) ) return 1;
-	if ( simplify1(&((*tree)->right)) ) return 1;
+	if ( simplifyLevel(&((*tree)->left)) ) return 1;
+	if ( simplifyLevel(&((*tree)->right)) ) return 1;
 	return 0;
 }
 
@@ -329,6 +330,83 @@ int simplify1(ExpTree *tree) {
  * to recognize the input as a prefix expression. When it is a numerical prefix 
  * expression, its value is computed and printed.
  */ 
+ 
+ExpTree makeTreeCopy(ExpTree *tp) {	
+	ExpTree tempTree = NULL;
+	if ( *tp != NULL ) {
+		tempTree = newExpTreeNode((*tp)->tt, (*tp)->t, makeTreeCopy(&(*tp)->left), makeTreeCopy(&(*tp)->right));
+	}
+	return tempTree;
+}
+
+int differentiate(ExpTree *tp, char *identifier) {
+	ExpTree copyLeft = NULL, copyRight = NULL, diffCopyLeft = NULL, diffCopyRight = NULL;
+	Token t;
+	if ( (*tp)->tt == Number ) {
+		((*tp)->t).number = 0;
+	}
+	if ( ((*tp)->tt == Identifier) && (strcmp((*tp)->t.identifier, identifier)==0) ) {
+		freeExpTree(*tp);
+		t.number = 1;
+		(*tp) = newExpTreeNode(Number, t, NULL, NULL);
+	}
+	if ( (*tp)->tt == Symbol ) {
+		switch ((*tp)->t.symbol) {
+			case '+':
+				differentiate(&(*tp)->left, identifier);
+				differentiate(&(*tp)->right, identifier);
+				break;
+			
+			case '-':
+				differentiate(&(*tp)->left, identifier);
+				differentiate(&(*tp)->right, identifier);
+				break;
+			
+			case '*':
+				copyLeft = makeTreeCopy(&(*tp)->left);
+				copyRight = makeTreeCopy(&(*tp)->right);
+				diffCopyLeft = makeTreeCopy(&copyLeft);
+				diffCopyRight = makeTreeCopy(&copyRight);
+				differentiate(&diffCopyLeft, identifier);
+				differentiate(&diffCopyRight, identifier);
+				freeExpTree(*tp);
+				t.symbol = '+';
+				(*tp) = newExpTreeNode(Symbol, t, NULL, NULL);
+				t.symbol = '*';
+				(*tp)->left = newExpTreeNode(Symbol, t, makeTreeCopy(&diffCopyLeft), makeTreeCopy(&copyRight));
+				(*tp)->right = newExpTreeNode(Symbol, t, makeTreeCopy(&copyLeft), makeTreeCopy(&copyRight));
+				freeExpTree(copyLeft);
+				freeExpTree(copyRight);
+				freeExpTree(diffCopyLeft);
+				freeExpTree(diffCopyRight);
+				break;
+			
+			case '/':
+				copyLeft = makeTreeCopy(&(*tp)->left);
+				copyRight = makeTreeCopy(&(*tp)->right);
+				diffCopyLeft = makeTreeCopy(&copyLeft);
+				diffCopyRight = makeTreeCopy(&copyRight);
+				differentiate(&diffCopyLeft, identifier);
+				differentiate(&diffCopyRight, identifier);
+				t.symbol = '/';
+				freeExpTree(*tp);
+				(*tp) = newExpTreeNode(Symbol, t, NULL, NULL);
+				t.symbol = '-';
+				(*tp)->left = newExpTreeNode(Symbol, t, NULL, NULL);		
+				t.symbol = '*';
+				((*tp)->left)->left = newExpTreeNode(Symbol, t, makeTreeCopy(&diffCopyLeft), makeTreeCopy(&copyRight));
+				((*tp)->left)->right = newExpTreeNode(Symbol, t, makeTreeCopy(&copyLeft), makeTreeCopy(&diffCopyRight));
+				(*tp)->right = newExpTreeNode(Symbol, t, makeTreeCopy(&copyRight), makeTreeCopy(&copyRight));
+				freeExpTree(copyLeft);
+				freeExpTree(copyRight);
+				freeExpTree(diffCopyLeft);
+				freeExpTree(diffCopyRight);
+				break;
+		}
+	}
+	simplify(tp);
+	return 0;
+}
 
 void infixExpTrees() {
 	char *ar;
@@ -353,7 +431,13 @@ void infixExpTrees() {
 			simplify(&t);
 			printf("simplified: ");
 			printExpTreeInfix(t);
+			printf("\nderivative to x: ");
+			differentiate(&t,"x\0");
+			simplify(&t);
+			printExpTreeInfix(t);
 			printf("\n");
+			
+			
 		} else {
 			printf("this is not an expression\n"); 
 		}

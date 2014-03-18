@@ -16,7 +16,7 @@ typedef struct ExpTreeNode {
 } ExpTreeNode;
 
 int differentiate(ExpTree *tp, char *identifier);
-void makeTreeCopy(ExpTree *tp, ExpTree *tp1);
+ExpTree makeTreeCopy(ExpTree *tp);
 void simplify(ExpTree *tree);
 int valueNumber(List *lp, double *wp);
 int simplifyLevel(ExpTree *tree);
