@@ -4,9 +4,6 @@
 CC     = gcc
 CFLAGS = -ansi -Wall -g
 
-pref:	scanner.c recognizeExp.c evalExp.c prefixExp.c mainPref.c
-	$(CC) $(CFLAGS) scanner.c recognizeExp.c evalExp.c prefixExp.c mainPref.c -lm -o $@
-
 infix:	scanner.c recognizeExp.c evalExp.c infixExp.c mainInfix.c
 	$(CC) $(CFLAGS) scanner.c recognizeExp.c evalExp.c infixExp.c mainInfix.c -lm -o $@
 	

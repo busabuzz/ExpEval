@@ -339,15 +339,19 @@ ExpTree makeTreeCopy(ExpTree *tp) {
 	return tempTree;
 }
 
-int differentiate(ExpTree *tp, char *identifier) {
+void differentiate(ExpTree *tp, char *identifier) {
 	ExpTree copyLeft = NULL, copyRight = NULL, diffCopyLeft = NULL, diffCopyRight = NULL;
 	Token t;
 	if ( (*tp)->tt == Number ) {
 		((*tp)->t).number = 0;
 	}
-	if ( ((*tp)->tt == Identifier) && (strcmp((*tp)->t.identifier, identifier)==0) ) {
+	if ( ((*tp)->tt == Identifier)  ) {		
+		if ( strcmp((*tp)->t.identifier, identifier) == 0 ) {		
+			t.number = 1;
+		} else {
+			t.number = 0;
+		}
 		freeExpTree(*tp);
-		t.number = 1;
 		(*tp) = newExpTreeNode(Number, t, NULL, NULL);
 	}
 	if ( (*tp)->tt == Symbol ) {
@@ -374,7 +378,7 @@ int differentiate(ExpTree *tp, char *identifier) {
 				(*tp) = newExpTreeNode(Symbol, t, NULL, NULL);
 				t.symbol = '*';
 				(*tp)->left = newExpTreeNode(Symbol, t, makeTreeCopy(&diffCopyLeft), makeTreeCopy(&copyRight));
-				(*tp)->right = newExpTreeNode(Symbol, t, makeTreeCopy(&copyLeft), makeTreeCopy(&copyRight));
+				(*tp)->right = newExpTreeNode(Symbol, t, makeTreeCopy(&copyLeft), makeTreeCopy(&diffCopyRight));
 				freeExpTree(copyLeft);
 				freeExpTree(copyRight);
 				freeExpTree(diffCopyLeft);
@@ -405,7 +409,6 @@ int differentiate(ExpTree *tp, char *identifier) {
 		}
 	}
 	simplify(tp);
-	return 0;
 }
 
 void infixExpTrees() {
@@ -433,7 +436,6 @@ void infixExpTrees() {
 			printExpTreeInfix(t);
 			printf("\nderivative to x: ");
 			differentiate(&t,"x\0");
-			simplify(&t);
 			printExpTreeInfix(t);
 			printf("\n");
 			
